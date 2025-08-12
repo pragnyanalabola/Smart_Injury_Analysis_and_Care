@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Smart Injury Analysis & Care{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Smart Injury Analysis & Care</h1>
+        <p>An intelligent application that helps you identify and treat common external injuries using advanced machine learning technology.</p>
+        <a href="{{ url_for('assess') }}" class="btn btn-light">Start Assessment</a>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">How It Works</h2>
+        <div class="features-grid">
+            <div class="card feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3 class="card-title">Quick Analysis</h3>
+                <p>Upload an image or use your webcam to capture an injury and get instant classification.</p>
+            </div>
+            
+            <div class="card feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-notes-medical"></i>
+                </div>
+                <h3 class="card-title">Treatment Guidance</h3>
+                <p>Receive personalized precautions and medication suggestions based on your injury type.</p>
+            </div>
+            
+            <div class="card feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <h3 class="card-title">Medical Reports</h3>
+                <p>Download a comprehensive PDF report for your records or to share with healthcare providers.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container">
+    <div class="card">
+        <h2 class="card-title">When to Seek Immediate Medical Attention</h2>
+        <div class="row">
+            <div class="col">
+                <h3>Critical Signs</h3>
+                <ul class="treatment-list">
+                    <li>Difficulty breathing</li>
+                    <li>Persistent chest or abdominal pain</li>
+                    <li>Severe bleeding that doesn't stop with pressure</li>
+                    <li>Suspected poisoning</li>
+                    <li>Seizure lasting more than 5 minutes</li>
+                    <li>Loss of consciousness</li>
+                </ul>
+            </div>
+            <div class="col">
+                <h3>For Injuries</h3>
+                <ul class="treatment-list">
+                    <li>Deep wounds with exposed tissue</li>
+                    <li>Burns covering large areas</li>
+                    <li>Suspected broken bones</li>
+                    <li>Head injury with confusion or vomiting</li>
+                    <li>Eye injuries</li>
+                    <li>Signs of infection (redness, swelling, warmth, pus)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container">
+    <div class="warning-notice">
+        <p><strong>Medical Disclaimer:</strong> This application is for educational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Any home page specific JavaScript can go here
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}About - Smart Injury Analysis & Care{% endblock %}
+
+{% block content %}
+<div class="container about-container">
+    <h1 class="about-title">About SmartMediCare</h1>
+    <p class="about-subtitle">A modern approach to injury assessment and first aid guidance</p>
+    
+    <div class="about-grid">
+        <div class="card about-card">
+            <div class="about-icon">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h3 class="card-title">ML-Powered Assessment</h3>
+            <p>Using advanced computer vision to identify and classify different types of injuries from images.</p>
+        </div>
+        
+        <div class="card about-card">
+            <div class="about-icon">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <h3 class="card-title">Personalized Reports</h3>
+            <p>Get proper first aid guidance and treatment suggestions based on your specific injury.</p>
+        </div>
+        
+        <div class="card about-card">
+            <div class="about-icon">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <h3 class="card-title">Educational Resource</h3>
+            <p>Learn proper injury care techniques and when to seek professional medical attention.</p>
+        </div>
+    </div>
+    
+    <div class="card mission-section">
+        <h2 class="card-title">Our Mission</h2>
+        <p>At SmartMediCare, we are committed to empowering individuals with accessible first aid guidance. Our application combines modern technology with medical knowledge to help you make informed decisions about injury care.</p>
+        <p>While our tool provides valuable recommendations, it is designed as an educational resource and not a replacement for professional medical advice. Always consult healthcare professionals for serious or persistent injuries.</p>
+    </div>
+</div>
+{% endblock %}

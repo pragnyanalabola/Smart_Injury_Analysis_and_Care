@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}Assess Injury - Smart Injury Analysis & Care{% endblock %}
+
+{% block content %}
+<div class="container assess-container">
+    <h1 class="page-title">Injury Assessment & Treatment Guide</h1>
+    
+    <div class="card upload-section">
+        <div class="upload-area" id="dropArea">
+            <div class="upload-icon">
+                <i class="fas fa-image"></i>
+            </div>
+            <p class="upload-text">Click to upload an image of the injury</p>
+            <p class="upload-format">PNG, JPG, GIF up to 10MB</p>
+        </div>
+        
+        <div class="upload-buttons">
+            <button class="btn btn-primary" id="uploadBtn">
+                <i class="fas fa-upload"></i> Upload
+            </button>
+            <button class="btn btn-light" id="cameraBtn">
+                <i class="fas fa-camera"></i> Camera
+            </button>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    </div>
+    
+    <div class="card description-section">
+        <button class="analyze-btn" id="analyzeBtn">Analyze Injury</button>
+        <div class="spinner" id="loadingSpinner"></div>
+    </div>
+    
+    <div class="results-section" id="resultsSection">
+        <h2 class="results-title">Assessment Results</h2>
+        
+        <div class="card results-card">
+            <div class="cropped-image-container">
+                <img id="croppedImage" src="" alt="Cropped Injury Area" style="max-width: 100%; display: none;">
+            </div>
+            <h3 class="injury-type" id="injuryType">Injury Type</h3>
+            
+            <p id="injuryDescriptionResult">Description of the injury will appear here.</p>
+            
+            <h4 class="section-heading">Recommended Precautions</h4>
+            <ul class="treatment-list" id="precautionsList">
+                <!-- Precautions will be populated here -->
+            </ul>
+            
+            <h4 class="section-heading">Recommended Medications</h4>
+            <ul class="treatment-list" id="medicationsList">
+                <!-- Medications will be populated here -->
+            </ul>
+            
+            <div class="report-button">
+                <button class="btn btn-primary" id="downloadReportBtn" disabled>
+                    <i class="fas fa-file-pdf"></i> Download PDF Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Modal -->
+<div class="camera-modal" id="cameraModal" style="display: none;">
+    <div class="camera-container">
+        <video id="cameraFeed" autoplay playsinline></video>
+        <canvas id="cameraCanvas" style="display: none;"></canvas>
+        <div class="camera-preview" id="cameraPreview" style="display: none;">
+            <img id="capturedImage" src="" alt="Captured Image">
+        </div>
+        <div class="camera-controls">
+            <button id="captureBtn" class="btn btn-primary">Capture</button>
+            <button id="retakeBtn" class="btn btn-light" style="display: none;">Retake</button>
+            <button id="confirmBtn" class="btn btn-success" style="display: none;">Confirm</button>
+            <button id="cancelCameraBtn" class="btn btn-light">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const resultsSection = document.getElementById('resultsSection');
+        const injuryType = document.getElementById('injuryType');
+        const confidenceIndicator = document.getElementById('confidenceIndicator');
+        const injuryDescriptionResult = document.getElementById('injuryDescriptionResult');
+        const precautionsList = document.getElementById('precautionsList');
+        const medicationsList = document.getElementById('medicationsList');
+        const downloadReportBtn = document.getElementById('downloadReportBtn');
+        const injuryDescriptionInput = document.getElementById('injuryDescription');
+        
+        // Camera modal elements
+        const cameraModal = document.getElementById('cameraModal');
+        const cameraFeed = document.getElementById('cameraFeed');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const capturedImage = document.getElementById('capturedImage');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelCameraBtn = document.getElementById('cancelCameraBtn');
+        
+        let selectedFile = null;
+        let cameraStream = null;
+        
+        // Initialize - hide results section
+        resultsSection.style.display = 'none';
+        loadingSpinner.style.display = 'none';
+        
+        // Handle file upload button click
+        uploadBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                displayPreview(selectedFile);
+            }
+        });
+        
+        // Handle drag and drop
+        dropArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropArea.classList.add('active');
+        });
+        
+        dropArea.addEventListener('dragleave', function() {
+            dropArea.classList.remove('active');
+        });
+        
+        dropArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropArea.classList.remove('active');
+            
+            if (e.dataTransfer.files.length > 0) {
+                selectedFile = e.dataTransfer.files[0];
+                displayPreview(selectedFile);
+            }
+        });
+        
+        // Handle click on drop area
+        dropArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Handle camera button
+        cameraBtn.addEventListener('click', function() {
+            // Show camera modal
+            cameraModal.style.display = 'flex';
+            
+            // Reset camera UI state
+            captureBtn.style.display = 'block';
+            retakeBtn.style.display = 'none';
+            confirmBtn.style.display = 'none';
+            cameraPreview.style.display = 'none';
+            cameraFeed.style.display = 'block';
+            
+            // Start camera
+            startCamera();
+        });
+        
+        // Handle capture button
+        captureBtn.addEventListener('click', function() {
+            captureImage();
+        });
+        
+        // Handle retake button
+        retakeBtn.addEventListener('click', function() {
+            // Show camera feed again
+            cameraFeed.style.display = 'block';
+            cameraPreview.style.display = 'none';
+            
+            // Show capture button, hide retake/confirm buttons
+            captureBtn.style.display = 'block';
+            retakeBtn.style.display = 'none';
+            confirmBtn.style.display = 'none';
+        });
+        
+        // Handle confirm button
+        confirmBtn.addEventListener('click', function() {
+            // Use the captured image
+            cameraModal.style.display = 'none';
+            
+            // Stop camera stream
+            stopCameraStream();
+        });
+        
+        // Handle cancel button
+        cancelCameraBtn.addEventListener('click', function() {
+            // Close camera modal
+            cameraModal.style.display = 'none';
+            
+            // Stop camera stream
+            stopCameraStream();
+        });
+        
+        // Handle analyze button
+        analyzeBtn.addEventListener('click', function() {
+            if (!selectedFile) {
+                showNotification('Please upload an image first', 'error');
+                return;
+            }
+            
+            // Show loading spinner
+            loadingSpinner.style.display = 'block';
+            analyzeBtn.disabled = true;
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+            
+            // Send to server
+            fetch('/api/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loading spinner
+                loadingSpinner.style.display = 'none';
+                analyzeBtn.disabled = false;
+                
+                // Display results
+                displayResults(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingSpinner.style.display = 'none';
+                analyzeBtn.disabled = false;
+                showNotification('An error occurred during analysis. Please try again.', 'error');
+            });
+        });
+        
+        // Handle download report button
+        downloadReportBtn.addEventListener('click', function() {
+            // This would be connected to the backend to generate and download the PDF
+            fetch('/api/download-report', {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status + ' ' + response.statusText);
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'injury_report.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error downloading report. Please try again.', 'error');
+            });
+        });
+        
+        // Function to start camera
+        function startCamera() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                })
+                .then(function(stream) {
+                    cameraStream = stream;
+                    cameraFeed.srcObject = stream;
+                    cameraFeed.play();
+                })
+                .catch(function(error) {
+                    console.error('Error accessing camera:', error);
+                    showNotification('Error accessing camera: ' + error.message, 'error');
+                    cameraModal.style.display = 'none';
+                });
+            } else {
+                showNotification('Your browser does not support camera access', 'error');
+                cameraModal.style.display = 'none';
+            }
+        }
+        
+        // Function to stop camera stream
+        function stopCameraStream() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+        }
+        
+        // Function to capture image from camera
+        function captureImage() {
+            // Set canvas dimensions to match video
+            cameraCanvas.width = cameraFeed.videoWidth;
+            cameraCanvas.height = cameraFeed.videoHeight;
+            
+            // Draw video frame to canvas
+            const ctx = cameraCanvas.getContext('2d');
+            ctx.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            
+            // Convert canvas to image
+            const imageDataUrl = cameraCanvas.toDataURL('image/jpeg');
+            capturedImage.src = imageDataUrl;
+            
+            // Show preview, hide video
+            cameraFeed.style.display = 'none';
+            cameraPreview.style.display = 'block';
+            
+            // Show retake and confirm buttons, hide capture button
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = 'inline-block';
+            confirmBtn.style.display = 'inline-block';
+            
+            // Convert data URL to File object
+            fetch(imageDataUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    selectedFile = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+                    
+                    // When confirmed, update the drop area with the preview
+                    confirmBtn.onclick = function() {
+                        displayPreview(selectedFile);
+                        cameraModal.style.display = 'none';
+                        stopCameraStream();
+                    };
+                });
+        }
+        
+        // Function to display image preview
+        function displayPreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                dropArea.innerHTML = `<img src="${e.target.result}" alt="Injury Image" style="max-width: 100%; max-height: 280px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Function to display results
+        function displayResults(data) {
+            // Check for error message from backend
+            if (data.error) {
+                showNotification(data.error, 'error');
+                resultsSection.style.display = 'none'; // Hide results section on error
+                return;
+            }
+
+            // Set injury type (using the name from backend info)
+            injuryType.textContent = data.injury_type;
+            
+            const croppedImage = document.getElementById('croppedImage');
+            if (data.cropped_image) {
+                croppedImage.src = data.cropped_image;  // Directly use the base64 string
+                croppedImage.style.display = 'block';
+                croppedImage.alt = 'Cropped Injury Area';
+            } else {
+                croppedImage.style.display = 'none';
+            }
+            
+            // Set injury description (echoed back from backend)
+            injuryDescriptionResult.textContent = data.description;
+            
+            // Set precautions
+            precautionsList.innerHTML = ''; // Clear previous results
+            if (data.precautions && data.precautions.length > 0) {
+                data.precautions.forEach(precaution => {
+                    const li = document.createElement('li');
+                    li.textContent = precaution;
+                    precautionsList.appendChild(li);
+                });
+            } else {
+                precautionsList.innerHTML = '<li>No specific precautions generated.</li>';
+            }
+            
+            // Set medications
+            medicationsList.innerHTML = ''; // Clear previous results
+            if (data.medications && data.medications.length > 0) {
+                data.medications.forEach(medication => {
+                    const li = document.createElement('li');
+                    li.textContent = medication;
+                    medicationsList.appendChild(li);
+                });
+            } else {
+                medicationsList.innerHTML = '<li>No specific medications generated.</li>';
+            }
+
+            // Enable and store report ID for download
+            if (data.report_id) {
+                downloadReportBtn.dataset.reportId = data.report_id; 
+                downloadReportBtn.disabled = false; // Enable download button
+            } else {
+                downloadReportBtn.disabled = true; // Disable if no report ID
+            }
+            
+            // Show results section
+            resultsSection.style.display = 'block';
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Function to show notifications
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <p>${message}</p>
+                </div>
+                <button class="notification-close">&times;</button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Add active class after a small delay to trigger animation
+            setTimeout(() => {
+                notification.classList.add('active');
+            }, 10);
+            
+            // Set up close button
+            const closeButton = notification.querySelector('.notification-close');
+            closeButton.addEventListener('click', () => {
+                notification.classList.remove('active');
+                
+                // Remove from DOM after animation completes
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            });
+            
+            // Auto-dismiss after 5 seconds for non-error notifications
+            if (type !== 'error') {
+                setTimeout(() => {
+                    notification.classList.remove('active');
+                    
+                    // Remove from DOM after animation completes
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 5000);
+            }
+        }
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Camera Modal Styles */
+    .camera-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .camera-container {
+        width: 90%;
+        max-width: 800px;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    #cameraFeed, #capturedImage {
+        width: 100%;
+        max-height: 60vh;
+        object-fit: contain;
+        background-color: #f0f0f0;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .camera-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .camera-preview {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    /* Notification Styles */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 350px;
+        background-color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .notification.active {
+        transform: translateX(0);
+    }
+    
+    .notification-content {
+        padding: 15px;
+    }
+    
+    .notification-info {
+        border-left: 4px solid #4285f4;
+    }
+    
+    .notification-success {
+        border-left: 4px solid #0f9d58;
+    }
+    
+    .notification-warning {
+        border-left: 4px solid #f4b400;
+    }
+    
+    .notification-error {
+        border-left: 4px solid #db4437;
+    }
+    
+    .notification-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: #666;
+    }
+    
+    /* Spinner Styles */
+    .spinner {
+        display: none;
+        width: 40px;
+        height: 40px;
+        margin: 20px auto;
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top: 4px solid #4285f4;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
